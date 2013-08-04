@@ -1,11 +1,7 @@
 import pymongo
-import sys
 from bottle import route, run, debug, template, request, validate, static_file, error, redirect
 from bson.objectid import ObjectId
 
-
-# only needed when you run Bottle on mod_wsgi
-from bottle import default_app
 
 @route('/todo')
 def todo_list():
@@ -33,9 +29,8 @@ def new_item():
         return template('new_task.tpl')
 
 
-@route('/edit/:no', method='GET')
-#@validate(no=int)
-def edit_item(no):
+@route('/edit/<id:re:[0-9a-z]+>', method='GET')
+def edit_item(id):
 
     if request.GET.get('save','').strip():
         edit = request.GET.get('task','').strip()
@@ -43,19 +38,19 @@ def edit_item(no):
 
         connection = pymongo.Connection("mongodb://localhost", safe=True)
         db = connection.todo
-        db.todo_items.update({"_id": ObjectId(no)}, {'task': edit, 'status': status})
+        db.todo_items.update({"_id": ObjectId(id)}, {'task': edit, 'status': status})
 
         redirect('/todo')
 
     else:
         connection = pymongo.Connection("mongodb://localhost", safe=True)
         db = connection.todo
-        cur_data = db.todo_items.find_one({"_id": ObjectId(no)})
+        cur_data = db.todo_items.find_one({"_id": ObjectId(id)})
 
-        return template('edit_task', old = cur_data, no = no)
+        return template('edit_task', old=cur_data, no=id)
 
 
-@route('/item/:id#[1-9a-z]+#')
+@route('/item/<id:re:[0-9a-z]+>')
 def show_item(id):
 
         connection = pymongo.Connection("mongodb://localhost", safe=True)
@@ -70,18 +65,16 @@ def show_item(id):
 
 @route('/help')
 def help():
-
     static_file('help.html', root='.')
 
 
-@route('/json/:id#[1-9a-z]+#')
+@route('/json/<id:re:[0-9a-z]+>')
 def show_json(id):
 
     connection = pymongo.Connection("mongodb://localhost", safe=True)
     db = connection.todo
     result = db.todo_items.find_one({"_id": ObjectId(id)})
     result['_id'] = id
-
 
     if not result:
         return {'_id': id, 'task': 'This item number does not exist!'}
